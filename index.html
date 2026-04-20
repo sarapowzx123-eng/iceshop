@@ -1,99 +1,466 @@
-const SHEET_STOCK = "stock";
-const SHEET_SALES = "sales";
-const SHEET_COUNT = "stockcount";
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<title>ร้านไอติม</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f5;color:#111;font-size:15px}
+.wrap{max-width:600px;margin:0 auto;padding:12px}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:10px 14px;background:#fff;border-radius:12px}
+.tabs{display:flex;gap:6px;margin-bottom:14px}
+.tab{flex:1;padding:10px 0;text-align:center;border:1px solid #ddd;border-radius:10px;background:#fff;font-size:14px;cursor:pointer}
+.tab.active{background:#111;color:#fff;border-color:#111;font-weight:500}
+.search{width:100%;padding:10px 14px;border:1px solid #ddd;border-radius:10px;font-size:14px;margin-bottom:10px;background:#fff}
+.cats{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.cat{padding:6px 12px;border:1px solid #ddd;border-radius:99px;font-size:12px;background:#fff;cursor:pointer;white-space:nowrap}
+.cat.active{background:#111;color:#fff;border-color:#111}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:14px}
+.item{padding:10px;background:#fff;border:1px solid #eee;border-radius:10px;cursor:pointer;text-align:left}
+.item.disabled{opacity:0.4;cursor:not-allowed}
+.item-name{font-size:12px;font-weight:500;margin-bottom:4px;line-height:1.3}
+.item-bot{display:flex;justify-content:space-between;align-items:center}
+.item-price{font-size:13px;font-weight:600}
+.item-stock{font-size:11px;color:#888}
+.item-stock.low{color:#e33}
+.cart{background:#fff;border:1px solid #eee;border-radius:12px;padding:14px;margin-bottom:12px}
+.cart-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f0}
+.cart-name{font-size:13px;flex:1;margin-right:8px}
+.qty-ctrl{display:flex;align-items:center;gap:6px}
+.qbtn{width:26px;height:26px;border:1px solid #ddd;border-radius:6px;background:#fff;font-size:15px;cursor:pointer}
+.cart-price{font-size:13px;min-width:52px;text-align:right}
+.delbtn{border:none;background:none;font-size:20px;color:#aaa;cursor:pointer;padding:0 4px}
+.cart-total{display:flex;justify-content:space-between;align-items:center;margin-top:12px}
+.total-label{font-size:17px;font-weight:600}
+.confirm-btn{padding:11px 22px;background:#22a06b;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer}
+.stock-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fff;border:1px solid #eee;border-radius:10px;margin-bottom:6px}
+.stock-info{flex:1;min-width:0}
+.stock-name{font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stock-sub{font-size:11px;color:#888}
+.stock-qty{font-size:14px;font-weight:600;min-width:32px;text-align:center}
+.stock-qty.zero{color:#e33}
+.stock-qty.low{color:#f80}
+.restock-btn{padding:6px 12px;border:1px solid #ddd;border-radius:8px;background:#fff;font-size:12px;cursor:pointer;white-space:nowrap}
+.restock-form{display:flex;gap:5px;align-items:center}
+.restock-form input{width:58px;padding:5px 7px;border:1px solid #ddd;border-radius:8px;font-size:13px;text-align:center}
+.restock-form button{padding:5px 10px;border-radius:8px;font-size:12px;cursor:pointer;border:none;font-weight:500}
+.btn-ok{background:#22a06b;color:#fff}
+.btn-cancel{background:#f0f0f0;color:#555}
+.msg{padding:10px 14px;border-radius:10px;font-size:13px;font-weight:500;text-align:center;margin-bottom:10px}
+.msg.success{background:#e6f9f0;color:#1a7a4a}
+.msg.error{background:#fdecea;color:#c0392b}
+.alert-low{background:#fdecea;border:1px solid #f5c6cb;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px;color:#c0392b}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.stat{background:#f7f7f7;border-radius:10px;padding:14px;text-align:center}
+.stat-label{font-size:12px;color:#888;margin-bottom:6px}
+.stat-val{font-size:24px;font-weight:600}
+.sale-row{background:#fff;border:1px solid #eee;border-radius:10px;padding:10px 14px;margin-bottom:6px}
+.sale-head{display:flex;justify-content:space-between;margin-bottom:4px}
+.sale-time{font-size:12px;color:#888}
+.sale-total{font-size:14px;font-weight:600}
+.sale-items{font-size:12px;color:#888}
+.setup-box{background:#fff;border-radius:14px;padding:24px;max-width:380px;margin:2rem auto}
+.step{display:flex;gap:10px;margin-bottom:12px;font-size:13px;color:#333;line-height:1.5}
+.step-num{width:22px;height:22px;border-radius:50%;background:#111;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0;margin-top:1px}
+.pin-screen{max-width:300px;margin:2rem auto;text-align:center}
+.pin-display{font-size:28px;letter-spacing:10px;min-height:40px;margin:16px 0;color:#111}
+.pin-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px}
+.pin-btn{padding:16px 0;font-size:20px;font-weight:500;border:1px solid #eee;border-radius:12px;background:#fff;cursor:pointer}
+.pin-enter{width:100%;padding:13px;background:#111;color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:500;cursor:pointer}
+.pin-error{color:#e33;font-size:13px;margin-bottom:10px}
+.branch-tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.branch-tag{padding:6px 14px;border:1px solid #ddd;border-radius:99px;font-size:13px;background:#fff;cursor:pointer}
+.branch-tag.active{background:#111;color:#fff;border-color:#111}
+.count-row{display:flex;align-items:center;gap:10px;padding:9px 12px;background:#fff;border:1px solid #eee;border-radius:10px;margin-bottom:6px}
+.count-info{flex:1;min-width:0}
+.count-name{font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.count-sys{font-size:11px;color:#888}
+.count-input{width:68px;padding:6px 8px;border:1px solid #ddd;border-radius:8px;font-size:14px;text-align:center}
+.result-row{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-radius:10px;margin-bottom:5px}
+.result-row.lost{background:#fdecea;border:1px solid #f5c6cb}
+.result-row.over{background:#e6f9f0;border:1px solid #b2dfdb}
+.result-row.ok2{background:#fff;border:1px solid #eee}
+.result-name{font-size:13px;font-weight:500}
+.result-sub{font-size:11px;color:#888}
+.result-diff{font-size:14px;font-weight:600}
+.result-diff.neg{color:#e33}
+.result-diff.pos{color:#22a06b}
+.sec-title{font-size:13px;font-weight:600;margin-bottom:8px}
+.apply-btn{width:100%;padding:12px;background:#f39c12;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;margin-top:8px}
+.check-btn{width:100%;padding:12px;background:#3498db;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer}
+.reset-btn{padding:6px 14px;border:1px solid #ddd;border-radius:8px;background:#fff;font-size:12px;cursor:pointer}
+.sync{font-size:11px;color:#22a06b}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<script>
+const SCRIPT_URL_KEY = "iceShopScriptUrl";
+const BRANCHES = ["ตลาด","ร้านบน","ร้านล่าง","บางแสนโทชิน"];
+const USERS = [
+  {id:"owner",name:"เจ้าของ",pin:"1234",role:"owner"},
+  {id:"s1",name:"ลูกน้อง ตลาด",pin:"1111",role:"staff",branch:"ตลาด"},
+  {id:"s2",name:"ลูกน้อง ร้านบน",pin:"2222",role:"staff",branch:"ร้านบน"},
+  {id:"s3",name:"ลูกน้อง ร้านล่าง",pin:"3333",role:"staff",branch:"ร้านล่าง"},
+  {id:"s4",name:"ลูกน้อง โทชิน",pin:"4444",role:"staff",branch:"บางแสนโทชิน"},
+];
+const MENU = [
+  {id:1,cat:"เหล้า/ชง",name:"79-เหล้าชง-(แก้ว)",unit:"แก้ว",price:79},
+  {id:2,cat:"เหล้า/ชง",name:"เหล้าแก้ว",unit:"แก้ว",price:0},
+  {id:3,cat:"เครื่องดื่ม",name:"a&w-รูทเบียร์",unit:"กระป๋อง",price:20},
+  {id:25,cat:"ไอติมชะลอม",name:"ชะลอมข้าวโพด",unit:"แท่ง",price:20},
+  {id:26,cat:"ไอติมชะลอม",name:"ชะลอมทุเรียน",unit:"แท่ง",price:20},
+  {id:27,cat:"ไอติมชะลอม",name:"ชะลอมมะขาม",unit:"แท่ง",price:20},
+  {id:28,cat:"ไอติมชะลอม",name:"ชะลอมมะพร้าว",unit:"แท่ง",price:20},
+  {id:29,cat:"ไอติมชะลอม",name:"ชะลอมมะม่วง",unit:"แท่ง",price:20},
+  {id:30,cat:"ไอติมชะลอม",name:"ชะลอมมังคุด",unit:"แท่ง",price:20},
+  {id:35,cat:"ซอฟต์เสิร์ฟ",name:"ซอฟต์เสิร์ฟ-รวงผึ้ง",unit:"ชุด",price:89},
+  {id:36,cat:"ซอฟต์เสิร์ฟ",name:"ซอฟต์เสิร์ฟ-นางเงือก",unit:"ชุด",price:89},
+  {id:38,cat:"ซอฟต์เสิร์ฟ",name:"ซอฟต์เสิร์ฟ-ปุยเมฆ",unit:"ชุด",price:129},
+  {id:39,cat:"ซอฟต์เสิร์ฟ",name:"ซอฟต์เสิร์ฟ-ยันต์",unit:"ชุด",price:99},
+  {id:41,cat:"ซอฟต์เสิร์ฟ",name:"ซอฟต์เสิร์ฟ-เจแปนนีสพุดดิ้ง",unit:"ชุด",price:129},
+  {id:42,cat:"ซอฟต์เสิร์ฟ",name:"ซอฟต์เสิร์ฟ-เรนโบว์",unit:"ชุด",price:89},
+  {id:43,cat:"ขนม/ไอติม",name:"ไอติมหวย",unit:"อัน",price:99},
+  {id:59,cat:"ซอฟต์เสิร์ฟ",name:"มองบลังค์มัทฉะ",unit:"ชุด",price:129},
+  {id:60,cat:"ซอฟต์เสิร์ฟ",name:"มองบลังค์สตรอว์เบอร์รี่",unit:"ชุด",price:129},
+  {id:61,cat:"ขนม/ไอติม",name:"มาชเมลโล่",unit:"ชิ้น",price:30},
+  {id:64,cat:"เหล้า/ชง",name:"รีเจนซี่",unit:"แบน",price:350},
+  {id:79,cat:"ขนม/ไอติม",name:"อมยิ้ม-จัมโบ้",unit:"อัน",price:40},
+  {id:80,cat:"ขนม/ไอติม",name:"อมยิ้ม-เล็ก",unit:"อัน",price:30},
+  {id:85,cat:"เบียร์",name:"เบียร์-snowy-rose",unit:"กระป๋อง",price:100},
+  {id:87,cat:"เบียร์",name:"เบียร์-snowy-ขาว",unit:"กระป๋อง",price:100},
+  {id:88,cat:"เบียร์",name:"เบียร์-โคโรน่า",unit:"ขวด",price:100},
+  {id:89,cat:"เครื่องดื่ม",name:"เป๊ปซี่",unit:"ขวด",price:20},
+  {id:99,cat:"ขนม/ไอติม",name:"แมวสตรอ",unit:"ตัว",price:159},
+  {id:100,cat:"ขนม/ไอติม",name:"แมวหนู",unit:"ตัว",price:159},
+  {id:101,cat:"ขนม/ไอติม",name:"แมวแอ๊บ",unit:"ตัว",price:159},
+  {id:102,cat:"ขนม/ไอติม",name:"แมวโพด",unit:"ตัว",price:159},
+  {id:104,cat:"โซจู",name:"โซจู-fresh",unit:"ขวด",price:120},
+  {id:106,cat:"โซจู",name:"โซจู-บ๊วย",unit:"ขวด",price:120},
+  {id:107,cat:"โซจู",name:"โซจู-พีช",unit:"ขวด",price:120},
+  {id:110,cat:"โซจู",name:"โซจู-สตรอเบอรี่",unit:"ขวด",price:120},
+  {id:111,cat:"โซจู",name:"โซจู-ส้ม",unit:"ขวด",price:120},
+  {id:114,cat:"โซจู",name:"โซจู-เมล่อน",unit:"ขวด",price:120},
+  {id:119,cat:"ขนม/ไอติม",name:"ไอติม-ถ้วยเล็ก",unit:"ถ้วย",price:39},
+  {id:120,cat:"ขนม/ไอติม",name:"ไอติม-ถ้วยใหญ่",unit:"ถ้วย",price:59},
+  {id:121,cat:"ไอศกรีม",name:"โคน-3-สี",unit:"อัน",price:59},
+  {id:122,cat:"ไอศกรีม",name:"ไอติม-โคนชมพู",unit:"อัน",price:59},
+  {id:126,cat:"ไอศกรีม",name:"ไอติม-โคนใหญ่",unit:"อัน",price:59},
+  {id:103,cat:"เหล้า/ชง",name:"แสงโสม",unit:"แบน",price:159},
+  {id:117,cat:"เบียร์",name:"โฮการ์เด้น",unit:"ขวด",price:120},
+  {id:118,cat:"เบียร์",name:"โฮการ์เด้น-โรเซ่",unit:"ขวด",price:120},
+];
+const CATS = ["ทั้งหมด",...[...new Set(MENU.map(m=>m.cat))]];
 
-function doGet(e) {
-  const result = handleRequest(e, (e.parameter||{}).action, {});
-  return buildResponse(result);
-}
+let scriptUrl = localStorage.getItem(SCRIPT_URL_KEY)||"https://script.google.com/macros/s/AKfycbw2Fhk0TwyAFES5zkMsoXVB89BjGAzuFwAh73Hbx_tVY4wz_aUG6E2c-GhWSzfCpfzz/exec";
+let S = {
+  user:null,branch:BRANCHES[0],tab:"ขาย",cat:"ทั้งหมด",
+  search:"",cart:[],stock:{},sales:[],syncing:false,
+  restockId:null,restockQty:10,
+  countInputs:{},countResult:null,countSearch:"",
+  msg:"",msgType:"success",viewBranch:BRANCHES[0],
+  allSales:{},allStock:{},pinInput:"",pinError:""
+};
 
-function doPost(e) {
-  const body = e.postData ? JSON.parse(e.postData.contents) : {};
-  const result = handleRequest(e, body.action, body);
-  return buildResponse(result);
-}
-
-function buildResponse(result) {
-  const output = ContentService
-    .createTextOutput(JSON.stringify(result))
-    .setMimeType(ContentService.MimeType.JSON);
-  return output;
-}
-
-function handleRequest(e, action, body) {
-  const p = e.parameter || {};
-  try {
-    if (action === "getStock")      return getStock(p.branch || body.branch);
-    if (action === "setStock")      return setStock(body.branch, body.data);
-    if (action === "getSales")      return getSales(p.branch || body.branch, p.date || body.date);
-    if (action === "addSale")       return addSale(body.branch, body.sale);
-    if (action === "addCount")      return addCount(body.branch, body.data);
-    return { error: "Unknown action" };
-  } catch(err) {
-    return { error: err.toString() };
+const $ = id => document.getElementById(id);
+const api = (params,body=null) => {
+  if(!scriptUrl) return Promise.resolve({error:"no url"});
+  if(body){
+    return fetch(scriptUrl,{method:"POST",body:JSON.stringify(body),headers:{"Content-Type":"application/json"}})
+      .then(r=>r.json()).catch(()=>({error:"network"}));
   }
+  const qs=Object.entries(params).map(([k,v])=>`${k}=${encodeURIComponent(v)}`).join("&");
+  return fetch(`${scriptUrl}?${qs}`).then(r=>r.json()).catch(()=>({error:"network"}));
+};
+
+async function loadStock(b){
+  S.syncing=true;render();
+  const r=await api({action:"getStock",branch:b});
+  if(r.ok){S.stock=r.stock||{};S.allStock[b]=r.stock||{};}
+  S.syncing=false;render();
+}
+async function loadSales(b){
+  const today=new Date().toLocaleDateString("th-TH");
+  const r=await api({action:"getSales",branch:b,date:today});
+  if(r.ok){S.sales=r.sales||[];S.allSales[b]=r.sales||[];}
+  render();
+}
+async function saveStock(b,obj){
+  S.syncing=true;render();
+  await api(null,{action:"setStock",branch:b,data:obj});
+  S.syncing=false;render();
+}
+async function recordSale(b,sale){await api(null,{action:"addSale",branch:b,sale});}
+async function recordCount(b,items){await api(null,{action:"addCount",branch:b,data:items});}
+
+function flash(m,t="success"){S.msg=m;S.msgType=t;render();setTimeout(()=>{S.msg="";render();},2500);}
+const getQty=id=>parseInt(S.stock[id]||0);
+
+async function confirmSale(){
+  if(!S.cart.length)return;
+  const ns={...S.stock};
+  S.cart.forEach(c=>{ns[c.id]=Math.max(0,(parseInt(ns[c.id])||0)-c.qty);});
+  const total=S.cart.reduce((s,c)=>s+c.price*c.qty,0);
+  const sale={date:new Date().toLocaleDateString("th-TH"),time:new Date().toLocaleTimeString("th-TH",{hour:"2-digit",minute:"2-digit"}),items:S.cart,total};
+  S.stock=ns;S.sales=[...S.sales,sale];S.cart=[];
+  flash("บันทึกยอดขายแล้ว ✓");
+  await saveStock(S.branch,ns);
+  await recordSale(S.branch,sale);
+}
+async function doRestock(id){
+  const ns={...S.stock,[id]:(parseInt(S.stock[id])||0)+S.restockQty};
+  S.stock=ns;S.restockId=null;
+  flash("เติมสต็อกแล้ว ✓");
+  await saveStock(S.branch,ns);
+}
+async function applyCount(){
+  const ns={...S.stock};
+  S.countResult.items.forEach(r=>{ns[r.id]=r.actual;});
+  S.stock=ns;
+  flash("อัปเดตสต็อกตามผลนับแล้ว ✓");
+  await recordCount(S.branch,S.countResult.items);
+  await saveStock(S.branch,ns);
+  S.countResult=null;S.countInputs={};render();
 }
 
-function getStock(branch) {
-  const sh = getOrCreateSheet(SHEET_STOCK);
-  const data = sh.getDataRange().getValues();
-  const result = {};
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === branch) result[data[i][1]] = data[i][2];
+function render(){
+  $("app").innerHTML = !scriptUrl ? renderSetup() : !S.user ? renderPin() : renderMain();
+  bind();
+}
+
+function renderSetup(){return `
+<div style="padding:1rem 0;text-align:center">
+<div style="font-size:40px;margin-bottom:12px">🍦</div>
+<div class="setup-box">
+  <h2 style="font-size:17px;font-weight:600;margin-bottom:8px">ตั้งค่า Script URL</h2>
+  <p style="font-size:13px;color:#555;margin-bottom:16px;line-height:1.6">วาง URL จาก Google Apps Script ที่ Deploy แล้ว</p>
+  <div class="step"><div class="step-num">1</div><div>เปิด Google Sheets → Extensions → Apps Script</div></div>
+  <div class="step"><div class="step-num">2</div><div>Deploy → New deployment → Web app</div></div>
+  <div class="step"><div class="step-num">3</div><div>Execute as: Me · Who has access: Anyone</div></div>
+  <div class="step"><div class="step-num">4</div><div>Copy Web app URL แล้ววางด้านล่าง</div></div>
+  <input id="urlInput" class="search" placeholder="https://script.google.com/macros/s/..." value="${scriptUrl}" style="margin-top:8px"/>
+  <button id="saveUrl" class="confirm-btn" style="width:100%;margin-top:10px;padding:13px">บันทึกและเริ่มใช้งาน</button>
+</div></div>`;}
+
+function renderPin(){return `
+<div class="pin-screen">
+  <div style="font-size:36px;margin-bottom:8px">🍦</div>
+  <div style="font-size:17px;font-weight:600;margin-bottom:4px">เข้าสู่ระบบ</div>
+  <div style="font-size:13px;color:#888;margin-bottom:12px">กรอก PIN</div>
+  <div class="pin-display">${"●".repeat(S.pinInput.length)||""}</div>
+  <div class="pin-grid">
+    ${[1,2,3,4,5,6,7,8,9,"",0,"⌫"].map(k=>`
+      <button class="pin-btn" data-key="${k}" style="${k===""?"opacity:0;pointer-events:none":""}">
+        ${k}</button>`).join("")}
+  </div>
+  ${S.pinError?`<div class="pin-error">${S.pinError}</div>`:""}
+  <button class="pin-enter" id="pinEnter">เข้าสู่ระบบ</button>
+  <div style="font-size:11px;color:#ccc;margin-top:14px">เจ้าของ:1234 · ตลาด:1111 · ร้านบน:2222 · ร้านล่าง:3333 · โทชิน:4444</div>
+</div>`;}
+
+function renderMain(){
+  const isOwner=S.user.role==="owner";
+  const b=S.branch;
+  const tabs=isOwner?["ขาย","สต็อก","นับสต็อก","สรุป","ภาพรวม"]:["ขาย","สต็อก","นับสต็อก"];
+  const today=new Date().toLocaleDateString("th-TH");
+  const todayTotal=S.sales.filter(s=>s.date===today).reduce((a,s)=>a+s.total,0);
+  const low=MENU.filter(m=>getQty(m.id)<=5);
+  const isCheckDay=[1,5].includes(new Date().getDay());
+  let content="";
+
+  if(S.tab==="ขาย"){
+    const f=MENU.filter(m=>(S.cat==="ทั้งหมด"||m.cat===S.cat)&&(S.search===""||m.name.includes(S.search)));
+    content=`
+    <input class="search" id="menuSearch" placeholder="ค้นหาเมนู..." value="${S.search}"/>
+    <div class="cats">${CATS.map(c=>`<button class="cat${S.cat===c?" active":""}" data-cat="${c}">${c}</button>`).join("")}</div>
+    <div class="grid">${f.map(m=>{
+      const st=getQty(m.id);const noP=!m.price;
+      return`<div class="item${(st===0||noP)?" disabled":""}" data-aid="${m.id}">
+        <div class="item-name">${m.name}</div>
+        <div class="item-bot">
+          <span class="item-price">${noP?"ไม่มีราคา":m.price+"฿"}</span>
+          <span class="item-stock${st<=5?" low":""}">${st}</span>
+        </div></div>`;}).join("")}</div>
+    ${S.cart.length?`<div class="cart">
+      <div style="font-size:14px;font-weight:600;margin-bottom:10px">ตะกร้า — ${b}</div>
+      ${S.cart.map(c=>`<div class="cart-row">
+        <span class="cart-name">${c.name}</span>
+        <div class="qty-ctrl">
+          <button class="qbtn" data-qid="${c.id}" data-d="-1">−</button>
+          <span>${c.qty}</span>
+          <button class="qbtn" data-qid="${c.id}" data-d="1">+</button>
+          <span class="cart-price">${(c.price*c.qty).toLocaleString()}฿</span>
+          <button class="delbtn" data-del="${c.id}">×</button>
+        </div></div>`).join("")}
+      <div class="cart-total">
+        <span class="total-label">รวม ${S.cart.reduce((s,c)=>s+c.price*c.qty,0).toLocaleString()}฿</span>
+        <button class="confirm-btn" id="confirmSale">ยืนยันขาย</button>
+      </div></div>`:""}`;
   }
-  return { ok: true, stock: result };
-}
 
-function setStock(branch, data) {
-  const sh = getOrCreateSheet(SHEET_STOCK);
-  const all = sh.getDataRange().getValues();
-  for (let i = all.length - 1; i >= 1; i--) {
-    if (all[i][0] === branch) sh.deleteRow(i + 1);
+  if(S.tab==="สต็อก"){
+    const f=MENU.filter(m=>S.search===""||m.name.includes(S.search));
+    content=`
+    ${low.length?`<div class="alert-low">ใกล้หมด ${low.length} รายการ: ${low.slice(0,4).map(m=>m.name).join(", ")}${low.length>4?` +${low.length-4}`:""}</div>`:""}
+    <input class="search" id="stockSearch" placeholder="ค้นหาสินค้า..." value="${S.search}"/>
+    ${f.map(m=>{const st=getQty(m.id);return`
+    <div class="stock-row">
+      <div class="stock-info"><div class="stock-name">${m.name}</div><div class="stock-sub">${m.cat} · ${m.unit}</div></div>
+      <span class="stock-qty${st===0?" zero":st<=5?" low":""}">${st}</span>
+      ${S.restockId===m.id?`<div class="restock-form">
+        <input type="number" id="rqty" value="${S.restockQty}" min="1"/>
+        <button class="btn-ok" data-dostock="${m.id}">เติม</button>
+        <button class="btn-cancel" id="cancelStock">ยกเลิก</button>
+      </div>`:`<button class="restock-btn" data-openstock="${m.id}">+ เติม</button>`}
+    </div>`;}).join("")}`;
   }
-  const rows = Object.entries(data).map(([id, qty]) => [branch, id, qty, new Date()]);
-  if (rows.length > 0) sh.getRange(sh.getLastRow() + 1, 1, rows.length, 4).setValues(rows);
-  return { ok: true };
-}
 
-function getSales(branch, date) {
-  const sh = getOrCreateSheet(SHEET_SALES);
-  const data = sh.getDataRange().getValues();
-  const result = [];
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === branch && (!date || data[i][1] === date)) {
-      result.push({ date: data[i][1], time: data[i][2], items: JSON.parse(data[i][3]), total: data[i][4] });
+  if(S.tab==="นับสต็อก"){
+    if(!S.countResult){
+      const f=MENU.filter(m=>S.countSearch===""||m.name.includes(S.countSearch));
+      content=`
+      <div style="font-size:13px;color:#888;margin-bottom:12px">กรอกจำนวนของจริงที่นับได้</div>
+      <input class="search" id="countSearch" placeholder="ค้นหา..." value="${S.countSearch}"/>
+      ${f.map(m=>`<div class="count-row">
+        <div class="count-info"><div class="count-name">${m.name}</div><div class="count-sys">ในระบบ: ${getQty(m.id)} ${m.unit}</div></div>
+        <input class="count-input" type="number" min="0" placeholder="นับได้" data-cid="${m.id}" value="${S.countInputs[m.id]??""}" />
+      </div>`).join("")}
+      <button class="check-btn" id="doCount" style="margin-top:12px">ตรวจสอบผล</button>`;
+    } else {
+      const lost=S.countResult.items.filter(r=>r.diff<0);
+      const over=S.countResult.items.filter(r=>r.diff>0);
+      const exact=S.countResult.items.filter(r=>r.diff===0);
+      content=`
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div><div style="font-weight:600">ผลนับสต็อก — ${S.countResult.branch}</div>
+        <div style="font-size:12px;color:#888">${S.countResult.date} ${S.countResult.time}</div></div>
+        <button class="reset-btn" id="resetCount">นับใหม่</button>
+      </div>
+      ${lost.length?`<div class="sec-title" style="color:#e33">ของหาย / ขาด (${lost.length})</div>
+      ${lost.map(r=>`<div class="result-row lost"><div><div class="result-name">${r.name}</div>
+        <div class="result-sub">ระบบ: ${r.sys} · นับได้: ${r.actual}</div></div>
+        <span class="result-diff neg">−${Math.abs(r.diff)} ${r.unit}</span></div>`).join("")}`:""}
+      ${over.length?`<div class="sec-title" style="color:#22a06b;margin-top:10px">ของเกิน (${over.length})</div>
+      ${over.map(r=>`<div class="result-row over"><div><div class="result-name">${r.name}</div>
+        <div class="result-sub">ระบบ: ${r.sys} · นับได้: ${r.actual}</div></div>
+        <span class="result-diff pos">+${r.diff} ${r.unit}</span></div>`).join("")}`:""}
+      ${exact.length?`<div class="sec-title" style="color:#888;margin-top:10px">ตรงกัน (${exact.length})</div>
+      ${exact.map(r=>`<div class="result-row ok2"><span class="result-name">${r.name}</span>
+        <span style="font-size:13px;color:#888">${r.actual} ${r.unit}</span></div>`).join("")}`:""}
+      ${isOwner?`<button class="apply-btn" id="applyCount">อัปเดตสต็อกตามผลนับ (เจ้าของเท่านั้น)</button>`:""}`;
     }
   }
-  return { ok: true, sales: result };
-}
 
-function addSale(branch, sale) {
-  const sh = getOrCreateSheet(SHEET_SALES);
-  sh.appendRow([branch, sale.date, sale.time, JSON.stringify(sale.items), sale.total]);
-  return { ok: true };
-}
-
-function addCount(branch, data) {
-  const sh = getOrCreateSheet(SHEET_COUNT);
-  const date = new Date();
-  const rows = data.map(r => [
-    branch,
-    Utilities.formatDate(date, "Asia/Bangkok", "yyyy-MM-dd"),
-    Utilities.formatDate(date, "Asia/Bangkok", "HH:mm"),
-    r.name, r.sys, r.actual, r.diff, r.unit
-  ]);
-  if (rows.length > 0) sh.getRange(sh.getLastRow() + 1, 1, rows.length, 8).setValues(rows);
-  return { ok: true };
-}
-
-function getOrCreateSheet(name) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sh = ss.getSheetByName(name);
-  if (!sh) {
-    sh = ss.insertSheet(name);
-    if (name === SHEET_STOCK)  sh.appendRow(["branch","itemId","qty","updatedAt"]);
-    if (name === SHEET_SALES)  sh.appendRow(["branch","date","time","items","total"]);
-    if (name === SHEET_COUNT)  sh.appendRow(["branch","date","time","itemName","sysQty","actualQty","diff","unit"]);
+  if(S.tab==="สรุป"&&isOwner){
+    const sl=S.sales.filter(x=>x.date===today);
+    content=`
+    <div class="stat-grid">
+      <div class="stat"><div class="stat-label">รายได้ — ${b}</div><div class="stat-val">${todayTotal.toLocaleString()}฿</div></div>
+      <div class="stat"><div class="stat-label">บิลวันนี้</div><div class="stat-val">${sl.length}</div></div>
+    </div>
+    ${sl.length===0?`<div style="text-align:center;color:#aaa;padding:2rem 0">ยังไม่มียอดขาย</div>`:
+    [...sl].reverse().map(x=>`<div class="sale-row">
+      <div class="sale-head"><span class="sale-time">${x.time}</span><span class="sale-total">${x.total.toLocaleString()}฿</span></div>
+      <div class="sale-items">${x.items.map(c=>`${c.name} ×${c.qty}`).join(" · ")}</div>
+    </div>`).join("")}`;
   }
-  return sh;
+
+  if(S.tab==="ภาพรวม"&&isOwner){
+    content=`
+    <div class="stat-grid">${BRANCHES.map(br=>{
+      const t=(S.allSales[br]||[]).filter(x=>x.date===today).reduce((a,s)=>a+s.total,0);
+      const cnt=(S.allSales[br]||[]).filter(x=>x.date===today).length;
+      return`<div class="stat"><div class="stat-label">${br}</div><div class="stat-val">${t.toLocaleString()}฿</div><div style="font-size:11px;color:#aaa">${cnt} บิล</div></div>`;}).join("")}</div>
+    <div style="font-weight:600;margin-bottom:10px">สต็อกต่ำ${isCheckDay?` <span style="font-size:12px;color:#f80">วันเช็คสต็อก</span>`:""}</div>
+    <div class="branch-tags">${BRANCHES.map(br=>`<button class="branch-tag${S.viewBranch===br?" active":""}" data-vb="${br}">${br}</button>`).join("")}</div>
+    ${MENU.filter(m=>(parseInt((S.allStock[S.viewBranch]||{})[m.id])||0)<=8).slice(0,20).map(m=>{
+      const st=parseInt((S.allStock[S.viewBranch]||{})[m.id])||0;
+      return`<div class="stock-row"><div class="stock-info"><div class="stock-name">${m.name}</div></div>
+        <span class="stock-qty${st===0?" zero":st<=5?" low":""}">${st} ${m.unit}</span></div>`;}).join("")
+    ||`<div style="text-align:center;color:#aaa;padding:1rem 0">สต็อกปกติทุกรายการ</div>`}`;
+  }
+
+  return`
+  <div class="topbar">
+    <div>
+      <span style="font-size:13px;font-weight:600">${S.user.name}</span>
+      <span style="font-size:11px;color:#888;margin-left:6px">${isOwner?"เจ้าของ":"สาขา "+b}</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      ${isCheckDay?`<span style="font-size:11px;background:#fff7e0;color:#b8860b;padding:3px 8px;border-radius:99px;border:1px solid #ffe08a">วันเช็คสต็อก</span>`:""}
+      <span class="sync">${S.syncing?"⏳":"✓"}</span>
+      <button id="logoutBtn" style="padding:5px 10px;border:1px solid #ddd;border-radius:8px;background:#fff;font-size:12px;cursor:pointer">ออก</button>
+    </div>
+  </div>
+  ${isOwner?`<div class="branch-tags">${BRANCHES.map(br=>`<button class="branch-tag${b===br?" active":""}" data-sb="${br}">${br}</button>`).join("")}</div>`:""}
+  ${S.msg?`<div class="msg ${S.msgType}">${S.msg}</div>`:""}
+  <div class="tabs">${tabs.map(t=>`<button class="tab${S.tab===t?" active":""}" data-tab="${t}">${t}</button>`).join("")}</div>
+  ${content}`;
 }
+
+function bind(){
+  $("saveUrl")?.addEventListener("click",()=>{
+    const v=$("urlInput")?.value.trim();
+    if(!v)return;
+    scriptUrl=v;localStorage.setItem(SCRIPT_URL_KEY,v);render();
+  });
+  document.querySelectorAll(".pin-btn").forEach(b=>b.addEventListener("click",()=>{
+    const k=b.dataset.key;
+    if(k==="⌫")S.pinInput=S.pinInput.slice(0,-1);
+    else if(k!==""&&S.pinInput.length<6)S.pinInput+=k;
+    render();
+  }));
+  $("pinEnter")?.addEventListener("click",()=>{
+    const u=USERS.find(x=>x.pin===S.pinInput);
+    if(u){S.user=u;S.pinInput="";S.pinError="";if(u.role==="staff")S.branch=u.branch;loadStock(S.branch);loadSales(S.branch);}
+    else{S.pinError="PIN ไม่ถูกต้อง";S.pinInput="";}
+    render();
+  });
+  $("logoutBtn")?.addEventListener("click",()=>{S.user=null;S.pinInput="";S.cart=[];render();});
+  document.querySelectorAll("[data-tab]").forEach(b=>b.addEventListener("click",()=>{S.tab=b.dataset.tab;S.search="";render();}));
+  document.querySelectorAll("[data-sb]").forEach(b=>b.addEventListener("click",()=>{S.branch=b.dataset.sb;S.cart=[];loadStock(S.branch);loadSales(S.branch);}));
+  $("menuSearch")?.addEventListener("input",e=>{S.search=e.target.value;render();});
+  document.querySelectorAll("[data-cat]").forEach(b=>b.addEventListener("click",()=>{S.cat=b.dataset.cat;render();}));
+  document.querySelectorAll("[data-aid]").forEach(b=>b.addEventListener("click",()=>{
+    const m=MENU.find(x=>x.id===parseInt(b.dataset.aid));
+    if(!m||!m.price||getQty(m.id)<=0)return;
+    const ex=S.cart.find(c=>c.id===m.id);
+    if(ex)S.cart=S.cart.map(c=>c.id===m.id?{...c,qty:c.qty+1}:c);
+    else S.cart=[...S.cart,{...m,qty:1}];
+    render();
+  }));
+  document.querySelectorAll("[data-qid]").forEach(b=>b.addEventListener("click",()=>{
+    const id=parseInt(b.dataset.qid),d=parseInt(b.dataset.d);
+    S.cart=S.cart.map(c=>c.id===id?{...c,qty:Math.max(1,c.qty+d)}:c);render();
+  }));
+  document.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>{S.cart=S.cart.filter(c=>c.id!==parseInt(b.dataset.del));render();}));
+  $("confirmSale")?.addEventListener("click",confirmSale);
+  $("stockSearch")?.addEventListener("input",e=>{S.search=e.target.value;render();});
+  document.querySelectorAll("[data-openstock]").forEach(b=>b.addEventListener("click",()=>{S.restockId=parseInt(b.dataset.openstock);S.restockQty=10;render();}));
+  document.querySelectorAll("[data-dostock]").forEach(b=>b.addEventListener("click",()=>{S.restockQty=parseInt($("rqty")?.value)||10;doRestock(parseInt(b.dataset.dostock));}));
+  $("cancelStock")?.addEventListener("click",()=>{S.restockId=null;render();});
+  $("countSearch")?.addEventListener("input",e=>{S.countSearch=e.target.value;render();});
+  document.querySelectorAll("[data-cid]").forEach(inp=>inp.addEventListener("input",e=>{
+    const v=e.target.value;
+    if(v==="")delete S.countInputs[parseInt(inp.dataset.cid)];
+    else S.countInputs[parseInt(inp.dataset.cid)]=parseInt(v);
+  }));
+  $("doCount")?.addEventListener("click",()=>{
+    const items=MENU.filter(m=>S.countInputs[m.id]!==undefined).map(m=>({...m,sys:getQty(m.id),actual:S.countInputs[m.id],diff:S.countInputs[m.id]-getQty(m.id)}));
+    S.countResult={items,branch:S.branch,date:new Date().toLocaleDateString("th-TH"),time:new Date().toLocaleTimeString("th-TH",{hour:"2-digit",minute:"2-digit"})};
+    render();
+  });
+  $("resetCount")?.addEventListener("click",()=>{S.countResult=null;S.countInputs={};render();});
+  $("applyCount")?.addEventListener("click",applyCount);
+  document.querySelectorAll("[data-vb]").forEach(b=>b.addEventListener("click",()=>{
+    S.viewBranch=b.dataset.vb;
+    if(!S.allStock[S.viewBranch])loadStock(S.viewBranch);
+    if(!S.allSales[S.viewBranch])loadSales(S.viewBranch);
+    render();
+  }));
+}
+render();
+</script>
+</body>
+</html>
