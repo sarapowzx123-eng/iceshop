@@ -1,0 +1,99 @@
+const SHEET_STOCK = "stock";
+const SHEET_SALES = "sales";
+const SHEET_COUNT = "stockcount";
+
+function doGet(e) {
+  const result = handleRequest(e, (e.parameter||{}).action, {});
+  return buildResponse(result);
+}
+
+function doPost(e) {
+  const body = e.postData ? JSON.parse(e.postData.contents) : {};
+  const result = handleRequest(e, body.action, body);
+  return buildResponse(result);
+}
+
+function buildResponse(result) {
+  const output = ContentService
+    .createTextOutput(JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON);
+  return output;
+}
+
+function handleRequest(e, action, body) {
+  const p = e.parameter || {};
+  try {
+    if (action === "getStock")      return getStock(p.branch || body.branch);
+    if (action === "setStock")      return setStock(body.branch, body.data);
+    if (action === "getSales")      return getSales(p.branch || body.branch, p.date || body.date);
+    if (action === "addSale")       return addSale(body.branch, body.sale);
+    if (action === "addCount")      return addCount(body.branch, body.data);
+    return { error: "Unknown action" };
+  } catch(err) {
+    return { error: err.toString() };
+  }
+}
+
+function getStock(branch) {
+  const sh = getOrCreateSheet(SHEET_STOCK);
+  const data = sh.getDataRange().getValues();
+  const result = {};
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === branch) result[data[i][1]] = data[i][2];
+  }
+  return { ok: true, stock: result };
+}
+
+function setStock(branch, data) {
+  const sh = getOrCreateSheet(SHEET_STOCK);
+  const all = sh.getDataRange().getValues();
+  for (let i = all.length - 1; i >= 1; i--) {
+    if (all[i][0] === branch) sh.deleteRow(i + 1);
+  }
+  const rows = Object.entries(data).map(([id, qty]) => [branch, id, qty, new Date()]);
+  if (rows.length > 0) sh.getRange(sh.getLastRow() + 1, 1, rows.length, 4).setValues(rows);
+  return { ok: true };
+}
+
+function getSales(branch, date) {
+  const sh = getOrCreateSheet(SHEET_SALES);
+  const data = sh.getDataRange().getValues();
+  const result = [];
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === branch && (!date || data[i][1] === date)) {
+      result.push({ date: data[i][1], time: data[i][2], items: JSON.parse(data[i][3]), total: data[i][4] });
+    }
+  }
+  return { ok: true, sales: result };
+}
+
+function addSale(branch, sale) {
+  const sh = getOrCreateSheet(SHEET_SALES);
+  sh.appendRow([branch, sale.date, sale.time, JSON.stringify(sale.items), sale.total]);
+  return { ok: true };
+}
+
+function addCount(branch, data) {
+  const sh = getOrCreateSheet(SHEET_COUNT);
+  const date = new Date();
+  const rows = data.map(r => [
+    branch,
+    Utilities.formatDate(date, "Asia/Bangkok", "yyyy-MM-dd"),
+    Utilities.formatDate(date, "Asia/Bangkok", "HH:mm"),
+    r.name, r.sys, r.actual, r.diff, r.unit
+  ]);
+  if (rows.length > 0) sh.getRange(sh.getLastRow() + 1, 1, rows.length, 8).setValues(rows);
+  return { ok: true };
+}
+
+function getOrCreateSheet(name) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sh = ss.getSheetByName(name);
+  if (!sh) {
+    sh = ss.insertSheet(name);
+    if (name === SHEET_STOCK)  sh.appendRow(["branch","itemId","qty","updatedAt"]);
+    if (name === SHEET_SALES)  sh.appendRow(["branch","date","time","items","total"]);
+    if (name === SHEET_COUNT)  sh.appendRow(["branch","date","time","itemName","sysQty","actualQty","diff","unit"]);
+  }
+  return sh;
+}
